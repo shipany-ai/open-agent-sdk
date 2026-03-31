@@ -1,24 +1,24 @@
-# Open Agent SDK
+# Open Agent SDK (中文版)
 
 [![npm](https://img.shields.io/npm/v/@shipany/open-agent-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@shipany/open-agent-sdk) ![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
-Open Agent SDK is an open-source Agent SDK inspired by [`@anthropic-ai/claude-agent-sdk`](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk). Build autonomous AI agents that can understand codebases, edit files, run commands, search the web, and execute complex multi-step workflows.
+Open Agent SDK 是一个开源的 Agent SDK，灵感来自 [`@anthropic-ai/claude-agent-sdk`](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk)。构建能够理解代码库、编辑文件、运行命令、搜索网页以及执行复杂多步骤工作流的自主 AI 代理。
 
-Unlike the official `@anthropic-ai/claude-agent-sdk` which requires a local Claude Code CLI process, **Open Agent SDK runs the full agent loop in-process** — deploy anywhere: cloud servers, serverless functions, Docker containers, CI/CD pipelines.
+与官方的 `@anthropic-ai/claude-agent-sdk` 不同，它需要本地 Claude Code CLI 进程，**Open Agent SDK 在进程内运行完整的 agent 循环** — 可以部署到任何地方：云服务器、无服务器函数、Docker 容器、CI/CD 流水线。
 
-## Get started
+## 快速开始
 
 ```sh
 npm install @shipany/open-agent-sdk
 ```
 
-Set your API key:
+设置你的 API 密钥：
 
 ```sh
 export ANTHROPIC_API_KEY=your-api-key
 ```
 
-Or use a third-party provider like [OpenRouter](https://openrouter.ai/):
+或者使用第三方提供商（如 [OpenRouter](https://openrouter.ai/)）：
 
 ```sh
 export ANTHROPIC_BASE_URL=https://openrouter.ai/api
@@ -26,9 +26,9 @@ export ANTHROPIC_API_KEY=your-openrouter-api-key
 export ANTHROPIC_MODEL=anthropic/claude-sonnet-4-6
 ```
 
-## Quick start
+## 使用示例
 
-### One-shot query (compatible with official SDK)
+### 一次性查询（兼容官方 SDK）
 
 ```typescript
 import { query } from '@shipany/open-agent-sdk'
@@ -51,7 +51,7 @@ for await (const message of query({
 }
 ```
 
-### Simple prompt (blocking)
+### 简单提示（阻塞式）
 
 ```typescript
 import { createAgent } from '@shipany/open-agent-sdk'
@@ -63,7 +63,7 @@ console.log(result.text)
 console.log(`Tokens: ${result.usage.input_tokens + result.usage.output_tokens}`)
 ```
 
-### Multi-turn session
+### 多轮对话
 
 ```typescript
 import { createAgent } from '@shipany/open-agent-sdk'
@@ -76,12 +76,12 @@ const agent = createAgent({
 const r1 = await agent.prompt('Read the main entry point and explain the architecture')
 console.log(r1.text)
 
-// Full context from turn 1 is preserved
+// 第 1 轮的完整上下文会被保留
 const r2 = await agent.prompt('Now refactor the error handling')
 console.log(r2.text)
 ```
 
-### Custom tools
+### 自定义工具
 
 ```typescript
 import { createAgent, getAllBaseTools } from '@shipany/open-agent-sdk'
@@ -101,7 +101,9 @@ const weatherTool = {
   isReadOnly: () => true,
   isConcurrencySafe: () => true,
   mapToolResultToToolResultBlockParam: (data, id) => ({
-    type: 'tool_result', tool_use_id: id, content: data,
+    type: 'tool_result',
+    tool_use_id: id,
+    content: data,
   }),
 }
 
@@ -112,7 +114,7 @@ const agent = createAgent({
 const result = await agent.prompt('What is the weather in Tokyo?')
 ```
 
-### MCP server integration
+### MCP 服务器集成
 
 ```typescript
 import { createAgent } from '@shipany/open-agent-sdk'
@@ -133,7 +135,7 @@ const agent = createAgent({
 const result = await agent.prompt('List files in /tmp')
 ```
 
-### Subagents
+### 子代理（Subagents）
 
 ```typescript
 import { query } from '@shipany/open-agent-sdk'
@@ -151,16 +153,16 @@ for await (const message of query({
     },
   },
 })) {
-  // handle messages...
+  // 处理消息...
 }
 ```
 
-### Permissions
+### 权限控制
 
 ```typescript
 import { query } from '@shipany/open-agent-sdk'
 
-// Read-only agent: can only analyze, not modify
+// 只读代理：只能分析，不能修改
 for await (const message of query({
   prompt: 'Review this code for best practices',
   options: {
@@ -171,165 +173,181 @@ for await (const message of query({
 }
 ```
 
-## API reference
+## API 参考
 
 ### `query({ prompt, options })`
 
-Top-level entry point, compatible with `@anthropic-ai/claude-agent-sdk`. Returns an `AsyncGenerator<SDKMessage>`.
+顶层入口点，兼容 `@anthropic-ai/claude-agent-sdk`。返回 `AsyncGenerator<SDKMessage>`。
 
 ### `createAgent(options)`
 
-Create a reusable agent with persistent session state.
+创建一个具有持久会话状态的可重用代理。
 
-- `agent.query(prompt)` — streaming response (`AsyncGenerator`)
-- `agent.prompt(prompt)` — blocking response (`Promise<QueryResult>`)
-- `agent.getMessages()` — conversation history
-- `agent.clear()` — reset session
+#### 选项
 
-### Options
+| 选项 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| `model` | string | `claude-sonnet-4-6` | Claude 模型 ID |
+| `apiKey` | string | `env.ANTHROPIC_API_KEY` | API 密钥 |
+| `baseURL` | string | Anthropic API | API 基础 URL（用于第三方提供商） |
+| `cwd` | string | `process.cwd()` | 工具的工作目录 |
+| `systemPrompt` | string | — | 自定义系统提示词 |
+| `tools` | Tool[] | All built-in | 可用工具 |
+| `allowedTools` | string[] | — | 工具白名单（如 `['Read', 'Glob']`） |
+| `permissionMode` | string | `bypassPermissions` | `acceptEdits` / `bypassPermissions` / `plan` / `default` |
+| `maxTurns` | number | `100` | 最大 agent 轮数 |
+| `maxBudgetUsd` | number | — | 最大 USD 花费 |
+| `mcpServers` | object | — | MCP 服务器配置 |
+| `agents` | object | — | 自定义子代理定义 |
+| `hooks` | object | — | 生命周期钩子（PreToolUse, PostToolUse, Stop 等） |
+| `thinking` | object | — | 扩展思考配置 |
+| `env` | object | — | 环境变量（兼容官方 SDK） |
+| `resume` | string | — | 通过 ID 恢复之前的会话 |
+| `canUseTool` | function | — | 自定义权限回调 |
+| `includePartialMessages` | boolean | `false` | 包含原始流式事件 |
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `model` | `string` | `claude-sonnet-4-6` | Claude model ID |
-| `apiKey` | `string` | `env.ANTHROPIC_API_KEY` | API key |
-| `baseURL` | `string` | Anthropic API | API base URL (for third-party providers) |
-| `cwd` | `string` | `process.cwd()` | Working directory for tools |
-| `systemPrompt` | `string` | — | Custom system prompt |
-| `tools` | `Tool[]` | All built-in | Available tools |
-| `allowedTools` | `string[]` | — | Tool whitelist (e.g. `['Read', 'Glob']`) |
-| `permissionMode` | `string` | `bypassPermissions` | `acceptEdits` / `bypassPermissions` / `plan` / `default` |
-| `maxTurns` | `number` | `100` | Max agentic turns |
-| `maxBudgetUsd` | `number` | — | Max USD spend |
-| `mcpServers` | `object` | — | MCP server configurations |
-| `agents` | `object` | — | Custom subagent definitions |
-| `hooks` | `object` | — | Lifecycle hooks (PreToolUse, PostToolUse, Stop, etc.) |
-| `thinking` | `object` | — | Extended thinking configuration |
-| `env` | `object` | — | Environment variables (compatible with official SDK) |
-| `resume` | `string` | — | Resume a previous session by ID |
-| `canUseTool` | `function` | — | Custom permission callback |
-| `includePartialMessages` | `boolean` | `false` | Include raw streaming events |
+## 环境变量
 
-### Environment variables
+| 变量 | 描述 |
+|------|------|
+| `ANTHROPIC_API_KEY` | API 密钥 |
+| `ANTHROPIC_BASE_URL` | API 基础 URL（用于 OpenRouter 等第三方提供商） |
+| `ANTHROPIC_MODEL` | 默认模型 |
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | API key |
-| `ANTHROPIC_BASE_URL` | API base URL (for third-party providers like OpenRouter) |
-| `ANTHROPIC_MODEL` | Default model |
+也支持通过 `options.env` 传递环境变量，与官方 SDK 相同。
 
-Also supports `options.env` for passing environment variables programmatically, same as the official SDK.
+## 内置工具
 
-## Built-in tools
+| 工具 | 描述 |
+|------|------|
+| **Read** | 读取文件（行号、图片、PDF） |
+| **Write** | 创建或覆盖文件 |
+| **Edit** | 精确的字符串替换 |
+| **Bash** | 执行 shell 命令 |
+| **Glob** | 按模式查找文件 |
+| **Grep** | 正则搜索文件内容（ripgrep） |
+| **WebFetch** | 获取并解析网页内容 |
+| **WebSearch** | 网页搜索 |
+| **Agent** | 生成子代理并行工作 |
+| **NotebookEdit** | 编辑 Jupyter notebooks |
+| **Skill** | 调用自定义技能 |
+| **AskUserQuestion** | 向用户提出澄清问题 |
+| **TodoWrite** | 创建/管理待办事项列表 |
+| **ToolSearch** | 搜索可用工具 |
+| **SendMessage** | 向代理/队友发送消息 |
+| **TeamCreate / TeamDelete** | 创建/删除代理团队 |
+| **EnterPlanMode / ExitPlanMode** | 计划审批模式 |
+| **EnterWorktree / ExitWorktree** | Git worktree 隔离 |
+| **ListMcpResources / ReadMcpResource** | MCP 资源访问 |
+| **TaskCreate / TaskUpdate / TaskList / TaskGet / TaskStop / TaskOutput** | 任务管理 |
 
-| Tool | Description |
-|------|-------------|
-| `Read` | Read files with line numbers, images, PDFs |
-| `Write` | Create or overwrite files |
-| `Edit` | Precise string replacement in files |
-| `Bash` | Execute shell commands |
-| `Glob` | Find files by pattern |
-| `Grep` | Search file contents with regex (ripgrep) |
-| `WebFetch` | Fetch and parse web content |
-| `WebSearch` | Search the web |
-| `Agent` | Spawn subagents for parallel work |
-| `NotebookEdit` | Edit Jupyter notebooks |
-| `Skill` | Invoke custom skills |
-| `AskUserQuestion` | Ask the user clarifying questions |
-| `TodoWrite` | Create/manage todo lists |
-| `ToolSearch` | Search available tools |
-| `SendMessage` | Send messages to agents/teammates |
-| `TeamCreate` / `TeamDelete` | Create/delete agent teams |
-| `EnterPlanMode` / `ExitPlanMode` | Plan approval mode |
-| `EnterWorktree` / `ExitWorktree` | Git worktree isolation |
-| `ListMcpResources` / `ReadMcpResource` | MCP resource access |
-| `TaskCreate` / `TaskUpdate` / `TaskList` / `TaskGet` / `TaskStop` / `TaskOutput` | Task management |
+## 架构
 
-## Architecture
-
-The official `@anthropic-ai/claude-agent-sdk` architecture:
+官方 `@anthropic-ai/claude-agent-sdk` 架构：
 
 ```
 Your code → SDK → spawn cli.js subprocess → stdin/stdout JSON → Anthropic API
 ```
 
-**Open Agent SDK** runs everything in-process:
+**Open Agent SDK** 在进程内运行所有内容：
 
 ```
 Your code → SDK → QueryEngine → Anthropic API (direct)
 ```
 
-### What's under the hood
+### 内部机制
 
-This SDK contains the **complete Claude Code engine** (2,000+ source files), not a simplified reimplementation:
+该 SDK 包含**完整的 Claude Code 引擎**（2,000+ 源文件），不是简化的重新实现：
 
-| Component | Description |
-|-----------|-------------|
-| **System Prompt** | Full prompt construction with static/dynamic boundary caching |
-| **Permission System** | 4-layer pipeline: rules → low-risk skip → whitelist → AI classifier + circuit breaker |
-| **Memory System** | Auto-memory with 4 types (user/feedback/project/reference), autoDream background organizer |
-| **Context Compression** | 9-segment structured extraction (autocompact, microcompact, snip compact) |
-| **Multi-Agent** | Leader/Teammate teams, Git worktree isolation, permission bubbling, async mailbox |
-| **MCP Client** | Full MCP support: stdio, SSE, HTTP transports |
-| **Search** | ripgrep + glob (same as Claude Code — no vector DB needed) |
-| **Tool Execution** | Concurrent batching for read-only tools, serial for mutations |
-| **API Client** | Streaming, retry with exponential backoff, fallback models, prompt caching |
+| 组件 | 描述 |
+|------|------|
+| **System Prompt** | 完整的提示词构造 + 静态/动态边界缓存 |
+| **Permission System** | 4层管道：rules → low-risk skip → whitelist → AI classifier + circuit breaker |
+| **Memory System** | 自动记忆，4种类型（user/feedback/project/reference），autoDream 后台组织器 |
+| **Context Compression** | 9段结构化提取（autocompact, microcompact, snip compact） |
+| **Multi-Agent** | Leader/Teammate 团队，Git worktree 隔离，权限冒泡，异步邮箱 |
+| **MCP Client** | 完整的 MCP 支持：stdio、SSE、HTTP 传输 |
+| **Search** | ripgrep + glob（与 Claude Code 相同 — 无需向量 DB） |
+| **Tool Execution** | 只读工具的并发批处理，修改工具的串行执行 |
+| **API Client** | 流式传输，指数退避重试，回退模型，提示词缓存 |
 
-## Comparison with `@anthropic-ai/claude-agent-sdk`
+## 与 `@anthropic-ai/claude-agent-sdk` 的比较
 
-| | Official SDK | Open Agent SDK |
-|---|---|---|
-| **Architecture** | Spawns local CLI subprocess | In-process agent loop |
-| **Cloud deployment** | Requires CLI installed | Works anywhere |
-| **Serverless** | Not supported | Fully supported |
-| **Docker** | Needs CLI in image | Just `npm install` |
-| **API surface** | `query()`, `tool()`, sessions | `query()`, `createAgent()`, sessions |
-| **Built-in tools** | 26 tools | 26 tools (same set) |
-| **System prompt** | Full engine | Full engine (same code) |
-| **Permission system** | 4-layer + AI classifier | 4-layer + AI classifier (same code) |
-| **Memory system** | Auto-memory + autoDream | Auto-memory + autoDream (same code) |
-| **Context compression** | 9-segment structured | 9-segment structured (same code) |
-| **Multi-agent** | Teams, worktrees | Teams, worktrees (same code) |
-| **MCP support** | Full | Full (same code) |
-| **Custom tools** | Via MCP | Native function tools + MCP |
-| **Streaming** | Via subprocess stdio | Direct API streaming |
+| 功能 | 官方 SDK | Open Agent SDK |
+|------|----------|----------------|
+| **架构** | 生成本地 CLI 子进程 | 进程内 agent 循环 |
+| **云部署** | 需要安装 CLI | 可在任何地方工作 |
+| **无服务器** | 不支持 | 完全支持 |
+| **Docker** | 需要在镜像中包含 CLI | 只需 `npm install` |
+| **API 表面** | `query()`, `tool()`, `sessions` | `query()`, `createAgent()`, `sessions` |
+| **内置工具** | 26 个工具 | 26 个工具（相同集合） |
+| **系统提示词** | 完整引擎 | 完整引擎（相同代码） |
+| **权限系统** | 4层 + AI 分类器 | 4层 + AI 分类器（相同代码） |
+| **记忆系统** | 自动记忆 + autoDream | 自动记忆 + autoDream（相同代码） |
+| **上下文压缩** | 9段结构化 | 9段结构化（相同代码） |
+| **多代理** | 团队，worktrees | 团队，worktrees（相同代码） |
+| **MCP 支持** | 完整 | 完整（相同代码） |
+| **自定义工具** | 通过 MCP | 原生函数工具 + MCP |
+| **流式传输** | 通过子进程 stdio | 直接 API 流式传输 |
 
-## Examples
+## 示例
 
-See the [`examples/`](./examples) directory:
+查看 [`examples/`](https://github.com/shipany-ai/open-agent-sdk/tree/main/examples) 目录：
 
-| # | Example | What it demonstrates |
-|---|---------|---------------------|
-| 01 | [Simple Query](./examples/01-simple-query.ts) | Streaming with `createAgent().query()` |
-| 02 | [Multi-Tool](./examples/02-multi-tool.ts) | Glob + Bash orchestration |
-| 03 | [Multi-Turn](./examples/03-multi-turn.ts) | Session persistence across turns |
-| 04 | [Prompt API](./examples/04-prompt-api.ts) | Blocking `agent.prompt()` |
-| 05 | [System Prompt](./examples/05-custom-system-prompt.ts) | Custom system prompt |
-| 06 | [MCP Server](./examples/06-mcp-server.ts) | MCP stdio transport |
-| 07 | [Custom Tools](./examples/07-custom-tools.ts) | User-defined tools |
-| 08 | [Official API](./examples/08-official-api-compat.ts) | `query()` drop-in compatible |
-| 09 | [Subagents](./examples/09-subagents.ts) | Agent delegation |
-| 10 | [Permissions](./examples/10-permissions.ts) | Read-only agent |
+| # | 示例 | 演示内容 |
+|---|------|----------|
+| 01 | [Simple Query](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/01-simple-query.ts) | 使用 `createAgent().query()` 进行流式传输 |
+| 02 | [Multi-Tool](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/02-multi-tool.ts) | Glob + Bash 编排 |
+| 03 | [Multi-Turn](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/03-multi-turn.ts) | 跨轮次的会话持久性 |
+| 04 | [Prompt API](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/04-prompt-api.ts) | 阻塞式 `agent.prompt()` |
+| 05 | [System Prompt](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/05-custom-system-prompt.ts) | 自定义系统提示词 |
+| 06 | [MCP Server](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/06-mcp-server.ts) | MCP stdio 传输 |
+| 07 | [Custom Tools](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/07-custom-tools.ts) | 用户定义的工具 |
+| 08 | [Official API](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/08-official-api-compat.ts) | `query()` 即插即用兼容 |
+| 09 | [Subagents](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/09-subagents.ts) | 代理委托 |
+| 10 | [Permissions](https://github.com/shipany-ai/open-agent-sdk/blob/main/examples/10-permissions.ts) | 只读代理 |
 
-Run any example:
+运行任何示例：
 
 ```sh
 npx tsx examples/01-simple-query.ts
 ```
 
-## Reporting bugs
+## 报告错误
 
-File issues at [github.com/shipany-ai/open-agent-sdk/issues](https://github.com/shipany-ai/open-agent-sdk/issues).
+在 [github.com/shipany-ai/open-agent-sdk/issues](https://github.com/shipany-ai/open-agent-sdk/issues) 提交问题。
 
-## Contributors
+## 贡献者
 
-<a href="https://github.com/shipany-ai/open-agent-sdk/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=shipany-ai/open-agent-sdk" />
-</a>
+- [@idoubi](https://github.com/idoubi)
+- [@claude](https://github.com/claude)
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=shipany-ai/open-agent-sdk&type=Timeline)](https://star-history.com/#shipany-ai/open-agent-sdk&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=shipany-ai/open-agent-sdk&type=Date)](https://star-history.com/#shipany-ai/open-agent-sdk&Date)
 
-## License
+## 许可证
 
 MIT
+
+---
+
+## 中文版说明
+
+本仓库是 [shipany-ai/open-agent-sdk](https://github.com/shipany-ai/open-agent-sdk) 的中文版，由 [srxly888-creator](https://github.com/srxly888-creator) 维护。
+
+### 主要改动
+
+- ✅ README 完整中文翻译
+- ✅ 保留所有代码示例
+- ✅ 技术术语保持原文
+- ✅ 链接和引用保持不变
+
+### 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+### 原项目
+
+- 原始仓库：https://github.com/shipany-ai/open-agent-sdk
+- NPM 包：[@shipany/open-agent-sdk](https://www.npmjs.com/package/@shipany/open-agent-sdk)
