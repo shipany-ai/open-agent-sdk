@@ -23,10 +23,14 @@ import type {
 
 interface OpenAIChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool'
-  content?: string | null
+  content?: string | OpenAIContentPart[] | null
   tool_calls?: OpenAIToolCall[]
   tool_call_id?: string
 }
+
+type OpenAIContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } }
 
 interface OpenAIToolCall {
   id: string
@@ -153,13 +157,31 @@ export class OpenAIProvider implements LLMProvider {
       return
     }
 
-    // Content blocks may contain text and/or tool_result blocks
-    const textParts: string[] = []
+    // Content blocks may contain text, image, and/or tool_result blocks
+    const contentParts: OpenAIContentPart[] = []
     const toolResults: Array<{ tool_use_id: string; content: string }> = []
 
     for (const block of msg.content) {
       if (block.type === 'text') {
-        textParts.push(block.text)
+        contentParts.push({ type: 'text', text: block.text })
+      } else if (block.type === 'image') {
+        // Convert Anthropic-style image block to OpenAI image_url format
+        const source = block.source
+        let imageUrl: string
+        if (source?.type === 'base64' && source.data) {
+          const mediaType = source.media_type || 'image/png'
+          imageUrl = `data:${mediaType};base64,${source.data}`
+        } else if (source?.type === 'url' && source.url) {
+          imageUrl = source.url
+        } else if (typeof source === 'string') {
+          imageUrl = source
+        } else {
+          continue // Skip malformed image blocks
+        }
+        contentParts.push({
+          type: 'image_url',
+          image_url: { url: imageUrl, detail: 'high' },
+        })
       } else if (block.type === 'tool_result') {
         toolResults.push({
           tool_use_id: block.tool_use_id,
@@ -177,9 +199,19 @@ export class OpenAIProvider implements LLMProvider {
       })
     }
 
-    // Text parts become a user message
-    if (textParts.length > 0) {
-      result.push({ role: 'user', content: textParts.join('\n') })
+    // Content parts become a user message
+    if (contentParts.length > 0) {
+      // If only text parts (no images), use simple string format for compatibility
+      const hasImages = contentParts.some(p => p.type === 'image_url')
+      if (!hasImages) {
+        const text = contentParts
+          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+          .map(p => p.text)
+          .join('\n')
+        result.push({ role: 'user', content: text })
+      } else {
+        result.push({ role: 'user', content: contentParts })
+      }
     }
   }
 
