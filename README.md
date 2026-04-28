@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/codeany-ai-open-agent-sdk-typescript-badge.png)](https://mseep.ai/app/codeany-ai-open-agent-sdk-typescript)
+
 # Open Agent SDK (TypeScript)
 
 [![npm version](https://img.shields.io/npm/v/@codeany/open-agent-sdk)](https://www.npmjs.com/package/@codeany/open-agent-sdk)
