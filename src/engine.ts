@@ -71,15 +71,92 @@ interface ToolUseBlock {
 }
 
 // ============================================================================
+// Structured-output JSON extraction
+// ============================================================================
+
+/**
+ * Attempt to parse JSON out of arbitrary assistant text.
+ *
+ * Tries, in order:
+ *   1. Parse the trimmed text as-is.
+ *   2. Strip Markdown code fences (```json ... ``` or ``` ... ```) and parse.
+ *   3. Slice from the first `{` to the last `}` (or first `[` / last `]`).
+ *
+ * Returns `undefined` if no valid JSON can be recovered, so callers can fall
+ * back to the previous value rather than overwriting it with garbage.
+ */
+function tryParseJson(text: string): unknown {
+  const raw = text.trim()
+  if (!raw) return undefined
+
+  const tryOnce = (candidate: string): unknown => {
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      return undefined
+    }
+  }
+
+  // 1. As-is
+  const direct = tryOnce(raw)
+  if (direct !== undefined) return direct
+
+  // 2. Strip fences (```json\n...\n``` or ```\n...\n```)
+  const fenced = raw.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i)
+  if (fenced) {
+    const stripped = tryOnce(fenced[1].trim())
+    if (stripped !== undefined) return stripped
+  }
+
+  // 3. Slice to the largest JSON-looking substring
+  const objStart = raw.indexOf('{')
+  const objEnd = raw.lastIndexOf('}')
+  if (objStart !== -1 && objEnd > objStart) {
+    const sliced = tryOnce(raw.slice(objStart, objEnd + 1))
+    if (sliced !== undefined) return sliced
+  }
+  const arrStart = raw.indexOf('[')
+  const arrEnd = raw.lastIndexOf(']')
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    const sliced = tryOnce(raw.slice(arrStart, arrEnd + 1))
+    if (sliced !== undefined) return sliced
+  }
+
+  return undefined
+}
+
+// ============================================================================
 // System Prompt Builder
 // ============================================================================
 
+/**
+ * Build the structured-output schema block that gets appended to the system
+ * prompt. Kept identical regardless of whether the user supplied a custom
+ * `systemPrompt` or relied on the engine default, so that the model always
+ * sees the schema when `outputFormat` is set.
+ */
+function buildStructuredOutputBlock(config: QueryEngineConfig): string | undefined {
+  if (!config.outputFormat) return undefined
+  return (
+    '\n\n# Structured Output Schema\n' +
+    'You must respond with a JSON object that strictly follows this schema:\n' +
+    JSON.stringify(config.outputFormat.schema, null, 2) +
+    '\n\nReply with ONLY the JSON object, no markdown fences, no extra text.'
+  )
+}
+
 async function buildSystemPrompt(config: QueryEngineConfig): Promise<string> {
+  const structuredBlock = buildStructuredOutputBlock(config)
+
   if (config.systemPrompt) {
-    const base = config.systemPrompt
-    return config.appendSystemPrompt
-      ? base + '\n\n' + config.appendSystemPrompt
-      : base
+    let prompt = config.systemPrompt
+    if (config.appendSystemPrompt) {
+      prompt += '\n\n' + config.appendSystemPrompt
+    }
+    if (structuredBlock) {
+      prompt += structuredBlock
+    }
+    return prompt
   }
 
   const parts: string[] = []
@@ -130,6 +207,13 @@ async function buildSystemPrompt(config: QueryEngineConfig): Promise<string> {
 
   if (config.appendSystemPrompt) {
     parts.push('\n' + config.appendSystemPrompt)
+  }
+
+  // Inject the schema for structured output so models that don't support
+  // OpenAI `response_format` (Anthropic, or OpenAI-compatible servers that
+  // only accept `{ type: 'json_object' }`) still know what shape to emit.
+  if (structuredBlock) {
+    parts.push(structuredBlock)
   }
 
   return parts.join('\n')
@@ -233,7 +317,13 @@ export class QueryEngine {
     let turnsRemaining = this.config.maxTurns
     let budgetExceeded = false
     let maxOutputRecoveryAttempts = 0
+    let structuredOutput: unknown = undefined
     const MAX_OUTPUT_RECOVERY = 3
+
+    // Pre-compute the provider-level response_format hint. Only OpenAI-style
+    // providers will read it; Anthropic ignores it. We always also inject the
+    // schema into the system prompt for cross-provider compatibility.
+    const responseFormat = this.config.outputFormat ? { type: 'json_object' as const } : undefined
 
     while (turnsRemaining > 0) {
       if (this.config.abortSignal?.aborted) break
@@ -290,6 +380,7 @@ export class QueryEngine {
                       budget_tokens: this.config.thinking.budgetTokens,
                     }
                   : undefined,
+              response_format: responseFormat,
             })
           },
           undefined,
@@ -350,6 +441,21 @@ export class QueryEngine {
 
       // Add assistant message to conversation
       this.messages.push({ role: 'assistant', content: response.content as any })
+
+      // Try to extract structured output. We parse on every turn and let the
+      // last successful parse win, since the final answer is the one the model
+      // emits after all tool work is done.
+      if (this.config.outputFormat && response.content.length > 0) {
+        const textBlock = response.content.find(
+          (b): b is { type: 'text'; text: string } => b.type === 'text',
+        )
+        if (textBlock) {
+          const parsed = tryParseJson(textBlock.text)
+          if (parsed !== undefined) {
+            structuredOutput = parsed
+          }
+        }
+      }
 
       // Yield assistant message
       yield {
@@ -445,6 +551,7 @@ export class QueryEngine {
       usage: this.totalUsage,
       model_usage: { [this.config.model]: { input_tokens: this.totalUsage.input_tokens, output_tokens: this.totalUsage.output_tokens } },
       cost: this.totalCost,
+      structured_output: structuredOutput,
     }
   }
 

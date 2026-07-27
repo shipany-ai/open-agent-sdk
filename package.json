@@ -32,6 +32,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "npx tsx examples/01-simple-query.ts",
+    "test:structured-output": "npx tsx tests/structured-output.test.ts",
     "test:all": "for f in examples/*.ts; do echo \"--- Running $f ---\"; npx tsx $f; echo; done",
     "web": "npx tsx examples/web/server.ts"
   },

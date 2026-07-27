@@ -309,6 +309,7 @@ export class Agent {
       maxTokens: opts.maxTokens ?? 16384,
       thinking: opts.thinking,
       jsonSchema: opts.jsonSchema,
+      outputFormat: opts.outputFormat,
       canUseTool,
       includePartialMessages: opts.includePartialMessages ?? false,
       abortSignal: this.abortCtrl.signal,
@@ -362,7 +363,12 @@ export class Agent {
     overrides?: Partial<AgentOptions>,
   ): Promise<QueryResult> {
     const t0 = performance.now()
-    const collected = { text: '', turns: 0, tokens: { in: 0, out: 0 } }
+    const collected = {
+      text: '',
+      turns: 0,
+      tokens: { in: 0, out: 0 },
+      structured: undefined as unknown,
+    }
 
     for await (const ev of this.query(text, overrides)) {
       switch (ev.type) {
@@ -378,6 +384,7 @@ export class Agent {
           collected.turns = ev.num_turns ?? 0
           collected.tokens.in = ev.usage?.input_tokens ?? 0
           collected.tokens.out = ev.usage?.output_tokens ?? 0
+          collected.structured = ev.structured_output
           break
       }
     }
@@ -388,6 +395,7 @@ export class Agent {
       num_turns: collected.turns,
       duration_ms: Math.round(performance.now() - t0),
       messages: [...this.messageLog],
+      structured_output: collected.structured,
     }
   }
 

@@ -93,6 +93,12 @@ export class OpenAIProvider implements LLMProvider {
       body.tools = tools
     }
 
+    // Forward structured-output hint when caller requested it. OpenAI-compatible
+    // backends accept either `{ type: 'json_object' }` or `{ type: 'json_schema', ... }`.
+    if (params.response_format) {
+      body.response_format = params.response_format
+    }
+
     // Make API call
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',

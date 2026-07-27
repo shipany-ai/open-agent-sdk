@@ -466,6 +466,11 @@ export interface QueryResult {
   duration_ms: number
   /** All conversation messages */
   messages: Message[]
+  /**
+   * Parsed structured output (only present when `outputFormat` was set on the
+   * Agent and the model produced valid JSON matching the schema).
+   */
+  structured_output?: unknown
 }
 
 // --------------------------------------------------------------------------
@@ -485,6 +490,14 @@ export interface QueryEngineConfig {
   maxTokens: number
   thinking?: ThinkingConfig
   jsonSchema?: Record<string, unknown>
+  /**
+   * Structured output format. When set the engine will:
+   *  1. Inject the schema into the system prompt (provider-agnostic),
+   *  2. Pass `response_format` to OpenAI-compatible providers,
+   *  3. Parse the final assistant text as JSON and surface it as
+   *     `structured_output` on the final `result` event.
+   */
+  outputFormat?: OutputFormat
   canUseTool: CanUseToolFn
   includePartialMessages: boolean
   abortSignal?: AbortSignal

@@ -25,7 +25,31 @@ export interface CreateMessageParams {
   messages: NormalizedMessageParam[]
   tools?: NormalizedTool[]
   thinking?: { type: string; budget_tokens?: number }
+  /**
+   * Structured-output response format.
+   * Currently passed through verbatim to providers that understand it
+   * (OpenAI-compatible Chat Completions accept `{ type: 'json_object' }` or
+   * `{ type: 'json_schema', json_schema: {...} }`). Providers that do not
+   * support it should ignore this field.
+   */
+  response_format?: ResponseFormat
 }
+
+/**
+ * Provider-level structured-output hint.
+ * Mirrors the OpenAI Chat Completions `response_format` shape so it can be
+ * forwarded directly. Anthropic providers ignore this field.
+ */
+export type ResponseFormat =
+  | { type: 'json_object' }
+  | {
+      type: 'json_schema'
+      json_schema: {
+        name?: string
+        schema: Record<string, unknown>
+        strict?: boolean
+      }
+    }
 
 /**
  * Normalized message format (Anthropic-like).

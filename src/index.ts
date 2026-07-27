@@ -69,6 +69,7 @@ export type {
   NormalizedContentBlock,
   NormalizedTool,
   NormalizedResponseBlock,
+  ResponseFormat,
 } from './providers/index.js'
 
 // --------------------------------------------------------------------------
