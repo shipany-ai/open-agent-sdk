@@ -84,9 +84,19 @@ export async function withRetry<T>(
         throw err
       }
 
-      // Wait before retry
+      // Wait before retry (abortable — responds to abort signal during delay)
       const delay = getRetryDelay(attempt, config)
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, delay)
+        abortSignal?.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer)
+            reject(new Error('Aborted'))
+          },
+          { once: true },
+        )
+      })
     }
   }
 
