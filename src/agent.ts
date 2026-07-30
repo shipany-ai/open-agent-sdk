@@ -234,7 +234,7 @@ export class Agent {
    * Run a query with streaming events.
    */
   async *query(
-    prompt: string,
+    prompt: string | any[],
     overrides?: Partial<AgentOptions>,
   ): AsyncGenerator<SDKMessage, void> {
     await this.setupDone
@@ -509,7 +509,7 @@ export function createAgent(options: AgentOptions = {}): Agent {
  * The agent is created, used, and cleaned up automatically.
  */
 export async function* query(params: {
-  prompt: string
+  prompt: string | any[]
   options?: AgentOptions
 }): AsyncGenerator<SDKMessage, void> {
   const ephemeral = createAgent(params.options)
