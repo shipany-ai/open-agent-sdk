@@ -453,6 +453,13 @@ export interface AgentOptions {
     hooks: Array<(input: any, toolUseId: string, context: { signal: AbortSignal }) => Promise<any>>
     timeout?: number
   }>>
+  /** 模型上下文窗口大小（单位：tokens），不设置则按原有模型匹配逻辑 */
+  contextWindowSize?: number
+  /** 模型定价（每百万 tokens，USD），不设置则按原有模型匹配逻辑 */
+  pricingPerMillion?: {
+    input: number
+    output: number
+  }
 }
 
 export interface QueryResult {
@@ -493,4 +500,9 @@ export interface QueryEngineConfig {
   hookRegistry?: import('./hooks.js').HookRegistry
   /** Session ID for hook context */
   sessionId?: string
+  contextWindowSize?: number
+  pricingPerMillion?: {
+    input: number
+    output: number
+  }
 }

@@ -65,7 +65,11 @@ export function getTokenCountFromUsage(usage: {
 /**
  * Get the context window size for a model.
  */
-export function getContextWindowSize(model: string): number {
+export function getContextWindowSize(
+  model: string,
+  contextWindowSize?: number,
+): number {
+  if (contextWindowSize !== undefined) return contextWindowSize
   // Anthropic model context windows
   if (model.includes('opus-4') && model.includes('1m')) return 1_000_000
   if (model.includes('opus-4')) return 200_000
@@ -98,8 +102,11 @@ export const AUTOCOMPACT_BUFFER_TOKENS = 13_000
 /**
  * Get the auto-compact threshold for a model.
  */
-export function getAutoCompactThreshold(model: string): number {
-  return getContextWindowSize(model) - AUTOCOMPACT_BUFFER_TOKENS
+export function getAutoCompactThreshold(
+  model: string,
+  contextWindowSize?: number,
+): number {
+  return getContextWindowSize(model, contextWindowSize) - AUTOCOMPACT_BUFFER_TOKENS
 }
 
 /**
@@ -136,10 +143,20 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
 export function estimateCost(
   model: string,
   usage: { input_tokens: number; output_tokens: number },
+  pricing?: { input: number; output: number },
 ): number {
-  const pricing = Object.entries(MODEL_PRICING).find(([key]) =>
-    model.includes(key),
-  )?.[1] ?? { input: 3 / 1_000_000, output: 15 / 1_000_000 }
+  if (pricing) {
+    return (
+      usage.input_tokens * (pricing.input / 1_000_000) +
+      usage.output_tokens * (pricing.output / 1_000_000)
+    )
+  }
+  const resolved =
+    Object.entries(MODEL_PRICING).find(([key]) =>
+      model.includes(key),
+    )?.[1] ?? { input: 3 / 1_000_000, output: 15 / 1_000_000 }
 
-  return usage.input_tokens * pricing.input + usage.output_tokens * pricing.output
+  return (
+    usage.input_tokens * resolved.input + usage.output_tokens * resolved.output
+  )
 }

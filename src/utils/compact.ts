@@ -42,11 +42,12 @@ export function shouldAutoCompact(
   messages: any[],
   model: string,
   state: AutoCompactState,
+  contextWindowSize?: number,
 ): boolean {
   if (state.consecutiveFailures >= 3) return false
 
   const estimatedTokens = estimateMessagesTokens(messages)
-  const threshold = getAutoCompactThreshold(model)
+  const threshold = getAutoCompactThreshold(model, contextWindowSize)
 
   return estimatedTokens >= threshold
 }

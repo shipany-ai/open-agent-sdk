@@ -245,7 +245,12 @@ export class QueryEngine {
       }
 
       // Auto-compact if context is too large
-      if (shouldAutoCompact(this.messages as any[], this.config.model, this.compactState)) {
+      if (shouldAutoCompact(
+        this.messages as any[],
+        this.config.model,
+        this.compactState,
+        this.config.contextWindowSize,
+      )) {
         await this.executeHooks('PreCompact')
         try {
           const result = await compactConversation(
@@ -345,7 +350,11 @@ export class QueryEngine {
             (this.totalUsage.cache_read_input_tokens || 0) +
             response.usage.cache_read_input_tokens
         }
-        this.totalCost += estimateCost(this.config.model, response.usage)
+        this.totalCost += estimateCost(
+          this.config.model,
+          response.usage,
+          this.config.pricingPerMillion,
+        )
       }
 
       // Add assistant message to conversation

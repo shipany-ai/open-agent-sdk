@@ -315,6 +315,8 @@ export class Agent {
       agents: opts.agents,
       hookRegistry: this.hookRegistry,
       sessionId: this.sid,
+      contextWindowSize: opts.contextWindowSize,
+      pricingPerMillion: opts.pricingPerMillion,
     })
     this.currentEngine = engine
 
